@@ -1,59 +1,153 @@
-# SignalNgrxCrud
+🟣 NgRx Entity Feature Factory
+A fully generic, extensible, and scalable pattern for building NgRx stores for entity-based state management.
+This pattern eliminates repetitive code while allowing feature-specific logic via custom reducers, selectors, and effects.
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 19.1.7.
+✅ Features
+✔ Auto-generate CRUD Actions
+✔ Auto-generate CRUD Reducer
+✔ Auto-generate Entity Selectors
+✔ Supports string or number as ID
+✔ Plug-in system for custom reducers
+✔ Compatible with createFeature() & EntityAdapter()
+✔ Easy integration with Effects
+✔ Ideal for large-scale Angular applications
 
-## Development server
+🏗 Folder Structure Example
+arduino
+Copy
+Edit
+src/
+ ├── BaseStore/
+ │    └── BaseEntityReducer.ts
+ ├── users/
+ │    ├── users.feature.ts
+ │    ├── users.reducer.ts
+ │    ├── users.selectors.ts
+ │    ├── users.effects.ts
+ │    ├── users.actions.ts (optional)
+ │    └── user.model.ts
+ └── ...
+✅ Factory Usage
+✅ Create a Feature
+ts
+Copy
+Edit
+export const UsersFeature = createEntityFeature<User, string>('Users', customOns);
+✅ Built-in Actions Generated
+load()
 
-To start a local development server, run:
+loadSuccess({ items })
 
-```bash
-ng serve
-```
+add({ item })
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+update({ id, changes })
 
-## Code scaffolding
+remove({ id })
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+clear()
 
-```bash
-ng generate component component-name
-```
+✨ Example
+1️⃣ Dispatching Actions
+ts
+Copy
+Edit
+this.store.dispatch(UsersFeature.actions.load());
+this.store.dispatch(UsersFeature.actions.add({ item: user }));
+this.store.dispatch(UsersFeature.actions.update({ id: user.id, changes: { name: 'New Name' } }));
+this.store.dispatch(UsersFeature.actions.remove({ id: user.id }));
+this.store.dispatch(UsersFeature.actions.clear());
+2️⃣ Selectors
+ts
+Copy
+Edit
+this.store.select(UsersFeature.selectors.selectAll);
+this.store.select(UsersFeature.selectors.selectEntities);
+this.store.select(UsersFeature.selectors.selectIds);
+this.store.select(UsersFeature.selectors.selectTotal);
+3️⃣ Custom Actions & Reducers (Feature-specific)
+ts
+Copy
+Edit
+export const promoteUser = createAction('[Users] Promote', props<{ userId: string }>());
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+const customOns = [
+    on(promoteUser, (state, { userId }) => {
+        const user = state.entities[userId];
+        if (!user) return state;
+        return UsersFeature.adapter.updateOne({ id: userId, changes: { role: 'Admin' } }, state);
+    })
+];
 
-```bash
-ng generate --help
-```
+export const UsersFeature = createEntityFeature<User, string>('Users', customOns);
+4️⃣ Custom Selector Example
+ts
+Copy
+Edit
+export const selectFirstUser = createSelector(
+    UsersFeature.selectors.selectAll,
+    users => users[0] ?? null
+);
+5️⃣ Example Effect
+ts
+Copy
+Edit
+@Injectable()
+export class UsersEffects {
+    private actions$ = inject(Actions);
+    private usersService = inject(UsersService);
 
-## Building
+    loadUsers$ = createEffect(() =>
+        this.actions$.pipe(
+            ofType(UsersFeature.actions.load),
+            mergeMap(() => this.usersService.getUsers()
+                .pipe(
+                    map(users => UsersFeature.actions.loadSuccess({ items: users })),
+                    catchError(() => of(UsersFeature.actions.clear()))
+                )
+            )
+        )
+    );
+}
+✅ Recommended Patterns
+Use customOns to extend reducers safely.
 
-To build the project run:
+Write feature-specific selectors in users.selectors.ts.
 
-```bash
-ng build
-```
+Avoid duplicating CRUD logic, let the factory handle it.
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+Inject additional non-entity state (e.g., search results) via custom reducer.
 
-## Running unit tests
+✅ Advanced Usage (optional)
+Feature	Supported?
+Multi-ID types	✅ string / number
+Custom Reducers	✅ via customOns
+Custom Actions	✅ extend easily
+Custom Effects	✅
+Custom Selectors	✅
+Extra State	✅ via reducer extension
+✅ Optional Improvements (Recommended)
+Consider extending the factory to also:
 
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
+Auto-generate common selectors (first, byId, last, total)
 
-```bash
-ng test
-```
+Auto-create success + failure actions for load, add, update
 
-## Running end-to-end tests
+Accept extraInitialState to merge feature-specific state without modifying EntityState
 
-For end-to-end (e2e) testing, run:
+If you want, I can also give you an optional:
 
-```bash
-ng e2e
-```
+✅ Entity Feature Generator (Nx or Schematic)
+to auto-create:
 
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
+feature.ts
 
-## Additional Resources
+reducer.ts
 
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+effects.ts
+
+selectors.ts
+
+actions.ts
+
+model.ts
+in one command.
